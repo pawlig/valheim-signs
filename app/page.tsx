@@ -1,0 +1,845 @@
+'use client';
+
+// This component is shared with a standalone Vite SPA; use portable HTML links and images.
+/* oxlint-disable next/no-html-link-for-pages, next/no-img-element */
+
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  ArrowRight,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Copy,
+  Check,
+  Code2,
+  Feather,
+  BookOpen,
+  RotateCcw,
+  ChevronDown,
+  Home,
+  Package,
+  Compass,
+  Skull,
+  Sun,
+  Moon,
+  Info,
+  MoveVertical,
+  Wand2,
+} from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
+  defaults,
+  compileSign,
+  countText,
+  parseRichText,
+  templates,
+  tagGroups,
+  type SignSettings,
+} from '@/lib/rich-text';
+
+const palette = [
+  '#EBC789',
+  '#FFFFFF',
+  '#EB8D77',
+  '#E5BA58',
+  '#A9C89F',
+  '#90C9E3',
+  '#C4A4DE',
+  '#333333',
+];
+const templateIcons = [Home, Package, Compass, Skull];
+const sources = [
+  [
+    'TextMesh Pro · přehled značek',
+    'https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichTextSupportedTags.html',
+  ],
+  [
+    'TextMesh Pro · pravidla zápisu',
+    'https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html',
+  ],
+  ['Valheim Wiki · cedule a limit', 'https://valheim.fandom.com/wiki/Sign'],
+  [
+    'ComfySigns · rozdíly při použití modu',
+    'https://github.com/redseiko/ComfyMods/tree/main/ComfySigns',
+  ],
+];
+function RangeControl({
+  label,
+  value,
+  min,
+  max,
+  suffix,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="range-control">
+      <div className="label-row">
+        <label>{label}</label>
+        <output>
+          {value}
+          {suffix}
+        </output>
+      </div>
+      <Slider
+        aria-label={label}
+        value={[value]}
+        min={min}
+        max={max}
+        step={1}
+        onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
+      />
+    </div>
+  );
+}
+export default function Page() {
+  const [text, setText] = useState('VÍTEJ DOMA');
+  const [settings, setSettings] = useState<SignSettings>(defaults);
+  const [compact, setCompact] = useState(true);
+  const [raw, setRaw] = useState<string | null>(null);
+  const [mode, setMode] = useState('visual');
+  const [advanced, setAdvanced] = useState(false);
+  const [day, setDay] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const [limit, setLimit] = useState('50');
+  const [guideOpen, setGuideOpen] = useState(false);
+  const input = useRef<HTMLTextAreaElement>(null),
+    output = useRef<HTMLTextAreaElement>(null);
+  const selection = useRef({ start: -1, end: -1 });
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const code = raw ?? compileSign(text, settings, compact);
+  const count = countText(code);
+  const preview = useMemo(() => parseRichText(code), [code]);
+  const over = count.units > Number(limit);
+  const unicodeRisk = !over && count.bytes > Number(limit);
+  const visibleCount = preview.runs.map((r) => r.text).join('').length;
+  const set = <K extends keyof SignSettings>(
+    key: K,
+    value: SignSettings[K],
+  ) => {
+    setSettings((s) => ({ ...s, [key]: value }));
+    setCopied(false);
+  };
+  const changeMode = (value: string) => {
+    if (value === 'code') setRaw(code);
+    else if (raw !== null) {
+      setText(raw);
+      setSettings({ ...defaults, color: '' });
+      setRaw(null);
+    }
+    setMode(value);
+    selection.current = { start: -1, end: -1 };
+  };
+  const wrap = (tag: string, closing?: string) => {
+    const name = tag.match(/^<([a-z-]+)/i)?.[1] ?? 'color';
+    const close = closing ?? `</${name}>`;
+    if (mode === 'code') {
+      setRaw((raw ?? code) + tag);
+      return;
+    }
+    const { start, end } = selection.current;
+    if (start !== end) {
+      setText(
+        (t) =>
+          t.slice(0, start) + tag + t.slice(start, end) + close + t.slice(end),
+      );
+      selection.current = { start: -1, end: -1 };
+    } else {
+      setText((t) => tag + t + close);
+    }
+    setCopied(false);
+  };
+  const insert = (value: string) => {
+    if (mode === 'code') {
+      setRaw((raw ?? code) + value);
+      return;
+    }
+    const { start, end } = selection.current;
+    const pos = start < 0 ? text.length : start;
+    setText((t) => t.slice(0, pos) + value + t.slice(start < 0 ? pos : end));
+    selection.current = { start: pos + value.length, end: pos + value.length };
+    requestAnimationFrame(() => {
+      input.current?.focus();
+      input.current?.setSelectionRange(pos + value.length, pos + value.length);
+    });
+  };
+  const format = (
+    key: 'bold' | 'italic' | 'underline' | 'strike',
+    tag: string,
+  ) => {
+    if (selection.current.start !== selection.current.end) wrap(`<${tag}>`);
+    else set(key, !settings[key]);
+  };
+  const chooseColor = (color: string) => {
+    if (selection.current.start !== selection.current.end)
+      wrap(`<color=${color}>`);
+    else set('color', color);
+  };
+  const copy = async () => {
+    setCopyError(false);
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2200);
+    } catch {
+      output.current?.focus();
+      output.current?.select();
+      setCopyError(true);
+    }
+  };
+  const reset = () => {
+    setText('');
+    setSettings(defaults);
+    setRaw(null);
+    setMode('visual');
+    setCopied(false);
+    selection.current = { start: -1, end: -1 };
+  };
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <a href="/" className="brand" aria-label="Runopis – editor cedulí">
+          <span className="brand-mark">
+            <Feather size={24} />
+          </span>
+          <span>
+            RUNOPIS<span className="brand-sub">VALHEIM SIGN STUDIO</span>
+          </span>
+        </a>
+        <div className="header-right">
+          <span className="vanilla-label">
+            <span /> Pro tvůj svět ve Valheimu
+          </span>
+          <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
+            <DialogTrigger className="quiet-button guide-button">
+              <BookOpen size={17} /> Průvodce značkami
+            </DialogTrigger>
+            <DialogContent className="guide-dialog">
+              <DialogHeader>
+                <DialogTitle>Malý průvodce velkými nápisy</DialogTitle>
+                <DialogDescription>
+                  Rich text pro Valheim. Základní značky i úplný přehled
+                  možností TextMesh Pro.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="guide-scroll">
+                <div className="guide-intro">
+                  <Info size={20} />
+                  <p>
+                    Barvy, velikost, tučné písmo a kurzíva se běžně používají
+                    bez modů. Ostatní značky vychází z dokumentace enginu;
+                    jejich chování závisí na verzi hry a nastavení cedule.
+                  </p>
+                </div>
+                {tagGroups.map((group) => (
+                  <section className="tag-group" key={group.name}>
+                    <h3>{group.name}</h3>
+                    <p>{group.note}</p>
+                    <div className="tag-grid">
+                      {group.tags.map(([name, label, example]) => (
+                        <button
+                          title={`Vložit ${example}`}
+                          key={name}
+                          onClick={() => {
+                            wrap(
+                              example,
+                              ['br', 'space', 'page', 'sprite'].includes(name)
+                                ? ''
+                                : undefined,
+                            );
+                            setGuideOpen(false);
+                          }}
+                        >
+                          <span>{label}</span>
+                          <code>{example}</code>
+                          <span aria-hidden="true">+</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+                <section className="guide-notes">
+                  <h3>Co se hodí vědět</h3>
+                  <p>
+                    <code>&lt;allcaps&gt;</code> je alias pro{' '}
+                    <code>&lt;uppercase&gt;</code>;{' '}
+                    <code>&lt;strikethrough&gt;</code> pro{' '}
+                    <code>&lt;s&gt;</code>. Barva přijímá název i HEX, včetně
+                    alfa kanálu. Pro nový řádek funguje také zápis{' '}
+                    <code>\n</code>.
+                  </p>
+                  <p>
+                    Úsporný zápis vynechá koncové uzavírací značky. Značky
+                    uprostřed nápisu ponechá, aby se nezměnil význam.
+                    Formátování se započítává do limitu.
+                  </p>
+                  <p>
+                    Výchozí limit je 50. Wiki uvádí také UTF‑8 bajty, zatímco
+                    modifikace pracují s limitem vstupního pole. Proto zde vidíš
+                    oba údaje. Režim 999 použij jen s odpovídajícím modem.
+                  </p>
+                  <p>
+                    Náhled je přibližný. Originální herní font, automatické
+                    zmenšování, řádkové zarovnání, materiál, svit ani dostupnost
+                    Unicode znaků web věrně nereprodukuje. Emoji se ve hře
+                    nemusí zobrazit.
+                  </p>
+                  <h3>Zdroje</h3>
+                  {sources.map(([label, url]) => (
+                    <a key={url} href={url} target="_blank" rel="noreferrer">
+                      {label} ↗
+                    </a>
+                  ))}
+                  <small>
+                    Rešerše: 10. září 2026 · Neoficiální fanouškovský nástroj.
+                  </small>
+                </section>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </header>
+      <main>
+        <section className="workspace-heading">
+          <div>
+            <p className="eyebrow">
+              <span /> PÍSAŘSKÁ DÍLNA
+            </p>
+            <h1>
+              Dej svému světu <em>jméno.</em>
+            </h1>
+            <p>Napiš. Vylaď. Přenes na ceduli.</p>
+          </div>
+          <span className="chapter">
+            01 <span>/ TVOJE CEDULE</span>
+          </span>
+        </section>
+        <div className="workspace">
+          <section className="editor-panel" aria-label="Editor cedule">
+            <div className="panel-title">
+              <h2>
+                <Feather size={19} /> Tvůj nápis
+              </h2>
+              <button
+                className="icon-button"
+                onClick={reset}
+                aria-label="Vymazat a obnovit nastavení"
+                title="Nová prázdná cedule"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+            <Tabs
+              value={mode}
+              onValueChange={changeMode}
+              className="editor-tabs"
+            >
+              <TabsList className="mode-tabs">
+                <TabsTrigger value="visual">
+                  <Wand2 size={15} /> Vizuální editor
+                </TabsTrigger>
+                <TabsTrigger value="code">
+                  <Code2 size={16} /> Vlastní kód
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="visual">
+                <label className="field-label" htmlFor="sign-text">
+                  TEXT NA CEDULI
+                </label>
+                <textarea
+                  id="sign-text"
+                  ref={input}
+                  value={text}
+                  spellCheck={false}
+                  placeholder="Tady začíná tvůj příběh…"
+                  maxLength={5000}
+                  onChange={(e) => {
+                    setText(e.target.value);
+                    setCopied(false);
+                  }}
+                  onSelect={(e) => {
+                    selection.current = {
+                      start: e.currentTarget.selectionStart,
+                      end: e.currentTarget.selectionEnd,
+                    };
+                  }}
+                />
+                <div className="text-tools">
+                  <span>Vyber část textu pro samostatný styl.</span>
+                  <button className="text-button" onClick={() => insert('\n')}>
+                    ↵ Řádek
+                  </button>
+                </div>
+                <div className="formatting-row">
+                  <div className="format-buttons">
+                    {(
+                      [
+                        {
+                          key: 'bold',
+                          tag: 'b',
+                          label: 'Tučné písmo',
+                          Icon: Bold,
+                        },
+                        {
+                          key: 'italic',
+                          tag: 'i',
+                          label: 'Kurzíva',
+                          Icon: Italic,
+                        },
+                        {
+                          key: 'underline',
+                          tag: 'u',
+                          label: 'Podtržení',
+                          Icon: Underline,
+                        },
+                        {
+                          key: 'strike',
+                          tag: 's',
+                          label: 'Přeškrtnutí',
+                          Icon: Strikethrough,
+                        },
+                      ] as const
+                    ).map(({ key, tag, label, Icon }) => (
+                      <button
+                        key={key}
+                        className={`format-button ${settings[key] ? 'selected' : ''}`}
+                        aria-label={label}
+                        aria-pressed={settings[key]}
+                        title={label}
+                        onClick={() => format(key, tag)}
+                      >
+                        <Icon size={18} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="alignment-buttons">
+                    {[
+                      {
+                        value: 'left',
+                        Icon: AlignLeft,
+                        label: 'Zarovnat vlevo',
+                      },
+                      {
+                        value: 'center',
+                        Icon: AlignCenter,
+                        label: 'Zarovnat na střed',
+                      },
+                      {
+                        value: 'right',
+                        Icon: AlignRight,
+                        label: 'Zarovnat vpravo',
+                      },
+                    ].map(({ value, Icon, label }) => (
+                      <button
+                        key={value}
+                        className={`format-button ${settings.align === value ? 'selected' : ''}`}
+                        onClick={() => set('align', value)}
+                        aria-label={label}
+                        aria-pressed={settings.align === value}
+                        title={label}
+                      >
+                        <Icon size={18} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="color-section">
+                  <div className="label-row">
+                    <label htmlFor="custom-color">Barva písma</label>
+                    <span className="color-hex">
+                      {settings.color || 'Výchozí'}
+                    </span>
+                  </div>
+                  <div className="palette">
+                    {palette.map((color, i) => (
+                      <button
+                        key={color}
+                        aria-label={`Barva ${['zlatá', 'bílá', 'červená', 'žlutá', 'zelená', 'modrá', 'fialová', 'černá'][i]}`}
+                        aria-pressed={settings.color === color}
+                        className={`swatch ${settings.color === color ? 'active' : ''}`}
+                        style={{ '--swatch': color } as CSSProperties}
+                        onClick={() => chooseColor(color)}
+                      >
+                        {settings.color === color && <Check size={16} />}
+                      </button>
+                    ))}
+                    <label className="custom-color" title="Vlastní barva">
+                      <span>+</span>
+                      <input
+                        id="custom-color"
+                        type="color"
+                        value={settings.color || '#FFFFFF'}
+                        onChange={(e) =>
+                          chooseColor(e.target.value.toUpperCase())
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+                <RangeControl
+                  label="Velikost písma"
+                  value={settings.size}
+                  min={25}
+                  max={250}
+                  suffix=" %"
+                  onChange={(v) => set('size', v)}
+                />
+                <button
+                  className="advanced-toggle"
+                  aria-expanded={advanced}
+                  onClick={() => setAdvanced(!advanced)}
+                >
+                  <span>
+                    <MoveVertical size={16} /> Pokročilé nastavení
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={advanced ? 'rotated' : ''}
+                  />
+                </button>
+                {advanced && (
+                  <div className="advanced-settings">
+                    <p className="microcopy">
+                      Značky TMP · jejich chování ověř ve hře.
+                    </p>
+                    <RangeControl
+                      label="Výškový posun (desetiny em)"
+                      value={settings.offset}
+                      min={-30}
+                      max={30}
+                      suffix=""
+                      onChange={(v) => set('offset', v)}
+                    />
+                    <RangeControl
+                      label="Rozestup znaků (desetiny em)"
+                      value={settings.spacing}
+                      min={-5}
+                      max={10}
+                      suffix=""
+                      onChange={(v) => set('spacing', v)}
+                    />
+                    <RangeControl
+                      label="Krytí"
+                      value={settings.opacity}
+                      min={0}
+                      max={100}
+                      suffix=" %"
+                      onChange={(v) => set('opacity', v)}
+                    />
+                    <div className="insert-tools">
+                      <button onClick={() => wrap('<uppercase>')}>ABC</button>
+                      <button onClick={() => wrap('<sub>')}>x₂</button>
+                      <button onClick={() => wrap('<sup>')}>x²</button>
+                      <button onClick={() => setGuideOpen(true)}>
+                        Další značky <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="symbols">
+                  <span>VLOŽIT SYMBOL</span>
+                  {['←', '→', '↑', '↓', '★', '◆', '⚔', 'ᚱ', 'ᚦ'].map(
+                    (symbol) => (
+                      <button
+                        key={symbol}
+                        title={`Vložit ${symbol}`}
+                        aria-label={`Vložit symbol ${symbol}`}
+                        onClick={() => insert(symbol)}
+                      >
+                        {symbol}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="code">
+                <label className="field-label" htmlFor="raw-code">
+                  RICH TEXT ZE HRY
+                </label>
+                <textarea
+                  className="raw-input"
+                  id="raw-code"
+                  value={raw ?? code}
+                  spellCheck={false}
+                  maxLength={5000}
+                  onChange={(e) => {
+                    setRaw(e.target.value);
+                    setCopied(false);
+                  }}
+                />
+                <p className="microcopy">
+                  Vlož existující kód nebo napiš vlastní značky. Náhled se mění
+                  okamžitě. Při návratu do editoru zůstanou značky součástí
+                  textu.
+                </p>
+                <button
+                  className="quiet-button full-width"
+                  onClick={() => setGuideOpen(true)}
+                >
+                  <BookOpen size={16} /> Vložit značku z průvodce
+                </button>
+              </TabsContent>
+            </Tabs>
+          </section>
+          <div className="result-column">
+            <section
+              className={`preview-panel ${day ? 'day' : ''}`}
+              aria-label="Živý náhled cedule"
+            >
+              <div className="preview-top">
+                <span className="preview-label">
+                  <span /> ŽIVÝ NÁHLED
+                </span>
+                <button
+                  className="scene-toggle"
+                  aria-label={
+                    day ? 'Přepnout na noční náhled' : 'Zesvětlit náhled'
+                  }
+                  title="Pouze osvětlení náhledu"
+                  onClick={() => setDay(!day)}
+                >
+                  {day ? <Sun size={17} /> : <Moon size={17} />}
+                </button>
+              </div>
+              <div className="sign-scene">
+                <img
+                  src="/sign-scene.png"
+                  alt="Prázdná dřevěná cedule v severském lese"
+                  width={1536}
+                  height={1024}
+                />
+                <div
+                  className="sign-text"
+                  style={{
+                    textAlign: preview.align,
+                    fontSize:
+                      visibleCount > 30
+                        ? 'clamp(12px, 2.1cqw, 27px)'
+                        : 'clamp(16px, 3.6cqw, 42px)',
+                  }}
+                >
+                  {preview.runs.map((run, i) =>
+                    run.style.transform ? (
+                      <span key={i}>
+                        {Array.from(
+                          new Intl.Segmenter('cs', {
+                            granularity: 'grapheme',
+                          }).segment(run.text),
+                          (item) => item.segment,
+                        ).map((char, j) => (
+                          <span
+                            key={j}
+                            style={
+                              {
+                                ...run.style,
+                                display: 'inline-block',
+                              } as CSSProperties
+                            }
+                          >
+                            {char}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span key={i} style={run.style as CSSProperties}>
+                        {run.text}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </div>
+              <div className="preview-bottom">
+                <span>
+                  <span className="dimension-line" /> Dřevěná cedule · 1 × 0,5 m
+                </span>
+                <span>ORIENTAČNÍ NÁHLED</span>
+              </div>
+            </section>
+            <section className="output-panel" aria-label="Výsledný text">
+              <div className="output-header">
+                <h2>
+                  <Code2 size={18} /> Připraveno do hry
+                </h2>
+                <span className={`count ${over ? 'danger' : ''}`}>
+                  {count.units}
+                  <span> / {limit} znaků</span>
+                </span>
+              </div>
+              <textarea
+                aria-label="Výsledný rich text ke zkopírování"
+                ref={output}
+                readOnly
+                value={code}
+                spellCheck={false}
+                className="code-output"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <div className="meter">
+                <span
+                  className={over ? 'over' : ''}
+                  style={{
+                    width: `${Math.min(100, (count.units / Number(limit)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="output-options">
+                <label className="switch-label" htmlFor="compact-switch">
+                  <Switch
+                    id="compact-switch"
+                    checked={compact}
+                    disabled={mode === 'code'}
+                    onCheckedChange={setCompact}
+                    aria-label="Úsporný zápis"
+                  />{' '}
+                  Úsporný zápis
+                </label>
+                <Select value={limit} onValueChange={(v) => v && setLimit(v)}>
+                  <SelectTrigger
+                    aria-label="Limit cedule"
+                    className="limit-select"
+                  >
+                    <SelectValue>
+                      {limit === '50' ? 'Vanilla · 50' : 'S modem · 999'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50">Vanilla · 50</SelectItem>
+                    <SelectItem value="999">S modem · 999</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p
+                className={`limit-note ${over || unicodeRisk ? 'warning' : ''}`}
+                aria-live="polite"
+              >
+                {over
+                  ? `O ${count.units - Number(limit)} znaků nad limitem. Zkrať text nebo uber formátování.`
+                  : unicodeRisk
+                    ? `${count.bytes} UTF-8 bajtů: diakritika může překročit limit hry. Zkus kratší nápis.`
+                    : `${count.bytes} UTF-8 bajtů · ${Number(limit) - count.units} znaků zbývá včetně značek.`}
+              </p>
+              <button
+                className={`copy-button ${copied ? 'copied' : ''}`}
+                onClick={copy}
+                disabled={!code}
+              >
+                {copied ? <Check size={19} /> : <Copy size={19} />}
+                <span>
+                  {copied
+                    ? 'Zkopírováno. Vzhůru do Valheimu!'
+                    : 'Zkopírovat text do hry'}
+                </span>
+                {!copied && <span className="key-hint">COPY</span>}
+              </button>
+              {copyError && (
+                <p role="alert" className="warning">
+                  Prohlížeč nepovolil schránku. Kód je označený — stiskni Ctrl+C
+                  nebo ⌘C.
+                </p>
+              )}
+              <p className="paste-help">
+                Ve hře otevři ceduli klávesou <kbd>E</kbd> a vlož text pomocí{' '}
+                <kbd>Ctrl</kbd> + <kbd>V</kbd>.
+              </p>
+            </section>
+          </div>
+        </div>
+        {preview.warnings.length > 0 && (
+          <div className="preview-warnings" aria-live="polite">
+            <Info size={18} />
+            <div>
+              {preview.warnings.map((w) => (
+                <p key={w}>{w}</p>
+              ))}
+            </div>
+          </div>
+        )}
+        <section className="templates-section">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">TROCHA INSPIRACE</span>
+              <h2>Začni s hotovým nápisem</h2>
+            </div>
+            <span>Jedno kliknutí. Pak už po svém.</span>
+          </div>
+          <div className="template-grid">
+            {templates.map((template, i) => {
+              const Icon = templateIcons[i];
+              return (
+                <button
+                  key={template.name}
+                  className="template-card"
+                  onClick={() => {
+                    setText(template.text);
+                    setSettings({ ...defaults, color: template.color });
+                    setRaw(null);
+                    setMode('visual');
+                    setCopied(false);
+                    selection.current = { start: -1, end: -1 };
+                  }}
+                  style={
+                    { '--template-color': template.color } as CSSProperties
+                  }
+                >
+                  <div className="template-top">
+                    <Icon size={17} />
+                    <span>{template.name}</span>
+                    <ArrowRight size={16} />
+                  </div>
+                  <strong>{template.text}</strong>
+                  <small>{template.eyebrow}</small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+        <div className="bottom-note">
+          <Info size={16} />
+          <p>
+            Náhled přibližuje formátování. Font, velikost a světlo se ve hře
+            mohou lišit.
+          </p>
+          <button onClick={() => setGuideOpen(true)}>
+            Co cedule umí <ArrowRight size={14} />
+          </button>
+        </div>
+      </main>
+      <footer>
+        <span className="footer-brand">
+          <Feather size={15} /> RUNOPIS
+        </span>
+        <span>Vyrobeno pro dlouhé večery v desátém světě.</span>
+        <span>Neoficiální nástroj pro Valheim</span>
+      </footer>
+    </div>
+  );
+}
