@@ -168,6 +168,7 @@ export function parseRichText(source: string): PreviewResult {
     .replace(/\\t/g, '\t')
     .replace(/\\v/g, '\n')
     .replace(/\\r/g, '\r')
+    .replace(/\r\n?/g, '\n')
     .split(/(<[^>]*>)/g)) {
     if (!token) continue;
     if (literal) {
@@ -177,6 +178,10 @@ export function parseRichText(source: string): PreviewResult {
     }
     if (!token.startsWith('<') || !token.endsWith('>')) {
       emit(token);
+      continue;
+    }
+    if (/^<br\s*\/?>$/i.test(token)) {
+      emit('\n');
       continue;
     }
     const match = token.match(

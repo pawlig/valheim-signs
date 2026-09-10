@@ -743,19 +743,23 @@ export default function Page() {
                               granularity: 'grapheme',
                             }).segment(run.text),
                             (item) => item.segment,
-                          ).map((char, j) => (
-                            <span
-                              key={j}
-                              style={
-                                {
-                                  ...run.style,
-                                  display: 'inline-block',
-                                } as CSSProperties
-                              }
-                            >
-                              {char}
-                            </span>
-                          ))}
+                          ).map((char, j) =>
+                            char === '\n' ? (
+                              <br key={j} />
+                            ) : (
+                              <span
+                                key={j}
+                                style={
+                                  {
+                                    ...run.style,
+                                    display: 'inline-block',
+                                  } as CSSProperties
+                                }
+                              >
+                                {char}
+                              </span>
+                            ),
+                          )}
                         </span>
                       ) : (
                         <span key={i} style={run.style as CSSProperties}>

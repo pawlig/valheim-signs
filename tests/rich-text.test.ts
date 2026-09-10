@@ -89,6 +89,36 @@ void test('advanced controls compile and unsupported assets are clearly flagged'
   assert.equal(runs[0].style.letterSpacing, '0.2em');
   assert.ok(parseRichText('<font="Missing">X').warnings.length);
 });
+
+void test('line break spellings preserve rotation and subsequent text styles', () => {
+  for (const separator of [
+    '\\n',
+    '<br>',
+    '<br/>',
+    '<br />',
+    '<BR>',
+    '\n',
+    '\r\n',
+    '\r',
+  ]) {
+    const preview = parseRichText(
+      `<rotate=10><color=red>A${separator}B</color></rotate>C`,
+    );
+    assert.equal(preview.runs.map((run) => run.text).join(''), 'A\nBC');
+    assert.equal(preview.warnings.length, 0);
+    for (const run of preview.runs.slice(0, -1)) {
+      assert.equal(run.style.transform, 'rotate(-10deg)');
+      assert.equal(run.style.color, '#f00');
+    }
+    assert.equal(preview.runs.at(-1)?.style.transform, undefined);
+  }
+  assert.equal(
+    parseRichText('<noparse>A<br />B</noparse>')
+      .runs.map((run) => run.text)
+      .join(''),
+    'A<br />B',
+  );
+});
 void test('underline and strike coexist and have independent closing scopes', () => {
   const { runs } = parseRichText('<u><s>A</u>B</s>C');
   assert.deepEqual(
