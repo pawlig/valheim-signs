@@ -2,6 +2,10 @@
 
 Český rich text editor s živým náhledem cedule, barvami, formátováním vybraného textu, posuny, symboly, předlohami, ručním kódem a kopírováním do hry. Přehled značek a odkazy na zdroje najdeš přímo v aplikaci.
 
+**[Vyzkoušet živou aplikaci → valheim-signs.teuferon.click](https://valheim-signs.teuferon.click/)**
+
+Editor si můžeš vyzkoušet přímo v prohlížeči bez instalace.
+
 ## EasyPanel
 
 1. Vytvoř **App** službu a v **Source** připoj tento repozitář (nebo nahraj archiv celého projektu).
