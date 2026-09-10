@@ -142,7 +142,16 @@ const unitValue = (s: string) =>
       ? s
       : `${s}px`
     : undefined;
-export function parseRichText(source: string): PreviewResult {
+export function parseRichText(
+  source: string,
+  t: (source: string, values?: Record<string, string | number>) => string = (
+    source,
+    values = {},
+  ) =>
+    source.replace(/\{(\w+)\}/g, (match, key: string) =>
+      String(values[key] ?? match),
+    ),
+): PreviewResult {
   const runs: PreviewRun[] = [],
     warnings = new Set<string>();
   const stacks = new Map<string, PreviewStyle[]>();
@@ -188,7 +197,7 @@ export function parseRichText(source: string): PreviewResult {
       /^<(\/)?([a-z-]+|#[\da-f]{3,8})(?:=(?:"([^"]*)"|'([^']*)'|([^>]*)))?>$/i,
     );
     if (!match) {
-      warnings.add(`Značku ${token} náhled nezná.`);
+      warnings.add(t('Neznámá značka: {value}', { value: token }));
       emit(token);
       continue;
     }
@@ -231,7 +240,7 @@ export function parseRichText(source: string): PreviewResult {
       case 'color': {
         const c = colorValue(value);
         if (!c) {
-          warnings.add(`Neplatná barva: ${value}`);
+          warnings.add(t('Neplatná barva: {value}', { value }));
           continue;
         }
         st.color = c;
@@ -240,7 +249,7 @@ export function parseRichText(source: string): PreviewResult {
       case 'size': {
         const u = unitValue(value);
         if (!u || parseFloat(value) <= 0) {
-          warnings.add(`Neplatná velikost: ${value}`);
+          warnings.add(t('Neplatná velikost: {value}', { value }));
           continue;
         }
         st.fontSize = value.endsWith('%')
@@ -253,12 +262,12 @@ export function parseRichText(source: string): PreviewResult {
       case 'alpha':
         if (/^#[\da-f]{2}$/i.test(value))
           st.opacity = parseInt(value.slice(1), 16) / 255;
-        else warnings.add('Průhlednost očekává zápis #00 až #FF.');
+        else warnings.add(t('Průhlednost očekává zápis #00 až #FF.'));
         break;
       case 'align':
         if (['left', 'center', 'right', 'justify'].includes(value))
           align = value as PreviewResult['align'];
-        else warnings.add(`Zarovnání ${value} náhled nepodporuje.`);
+        else warnings.add(t('Nepodporované zarovnání: {value}', { value }));
         continue;
       case 'voffset':
         st.verticalAlign = unitValue(value);
@@ -306,7 +315,9 @@ export function parseRichText(source: string): PreviewResult {
         break;
       default:
         warnings.add(
-          `Značka <${name}> nemá věrný webový náhled; ověř ji ve hře.`,
+          t('Značka {value} nemá věrný náhled; ověř ji ve hře.', {
+            value: `<${name}>`,
+          }),
         );
         continue;
     }

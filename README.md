@@ -1,10 +1,20 @@
 # Runopis — cedule pro Valheim
 
-Český rich text editor s živým náhledem cedule, barvami, formátováním vybraného textu, posuny, symboly, předlohami, ručním kódem a kopírováním do hry. Přehled značek a odkazy na zdroje najdeš přímo v aplikaci.
+Vícejazyčný rich text editor s živým náhledem cedule, barvami, formátováním vybraného textu, posuny, symboly, předlohami, ručním kódem a kopírováním do hry. Přehled značek a odkazy na zdroje najdeš přímo v aplikaci.
 
 **[Vyzkoušet živou aplikaci → valheim-signs.teuferon.click](https://valheim-signs.teuferon.click/)**
 
 Editor si můžeš vyzkoušet přímo v prohlížeči bez instalace.
+
+## Jazyky rozhraní
+
+Přepínač v horní liště nabízí češtinu, angličtinu, němčinu, španělštinu, francouzštinu, portugalštinu, čínštinu, hindštinu, arabštinu, bengálštinu, ruštinu, japonštinu a indonéštinu. Přeložené jsou ovládací prvky, průvodce, upozornění i předlohy. Arabské rozhraní používá směr zprava doleva.
+
+Výchozí volba **Automaticky podle prohlížeče** vybírá první podporovaný jazyk z `navigator.languages`, případně z `navigator.language`. Rozpoznává regionální varianty jako `de-AT`, `pt-BR` a `en-US`. Pokud se jazyk nepodaří určit nebo žádný není podporovaný, použije angličtinu. Čínština používá společný překlad ve zjednodušeném písmu.
+
+Ruční volba má přednost a ukládá se v prohlížeči pod klíčem `runopis.language`. K automatické detekci se lze kdykoli vrátit. Při zablokovaném úložišti funguje volba pro aktuální načtení stránky. Přepnutí jazyka nepřekládá ani nemaže rozepsaný nápis a nemění generovaný kód. Kliknutí na předlohu vloží její text ve zvoleném jazyce.
+
+Překlady jsou v `lib/locales/messages.json`, detekce a anglická záloha v `lib/i18n.ts`. Testy ověřují úplnost slovníků, shodu proměnných v překladech, pořadí detekce i zachování obsahu náhledu. Překlady neprošly jazykovou korekturou rodilými mluvčími.
 
 ## EasyPanel
 
