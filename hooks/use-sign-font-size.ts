@@ -1,51 +1,79 @@
 'use client';
 
-import { useEffect, useState, type RefObject } from 'react';
-import { fitSignFontSize } from '@/lib/sign-layout';
+import { useLayoutEffect, useState, type RefObject } from 'react';
+import { fitSignFontSize, fitSignContentScale } from '@/lib/sign-layout';
+import type { PreviewRun } from '@/lib/rich-text';
 
-/** Measures actual Norse glyph widths; formatting tags never count as letters. */
+/** Fit the rendered rich text, including fallback glyphs and explicit sizes. */
 export function useSignFontSize(
   scene: RefObject<HTMLDivElement | null>,
-  text: string,
+  content: RefObject<HTMLDivElement | null>,
+  runs: PreviewRun[],
 ) {
-  const [fontSize, setFontSize] = useState<number | null>(null);
-  useEffect(() => {
+  const [layout, setLayout] = useState({ fontSize: 0, scale: 1 });
+  useLayoutEffect(() => {
     const element = scene.current;
-    if (!element) return;
+    const text = content.current;
+    if (!element || !text) return;
     const context = document.createElement('canvas').getContext('2d');
     if (!context) return;
     let disposed = false;
     const measure = () => {
-      if (disposed) return;
+      if (disposed || element.clientWidth <= 0) return;
       context.font = '400 100px Norse, sans-serif';
       const capital = context.measureText('H');
-      const lines = text.split(/\r?\n/);
-      const size = fitSignFontSize({
+      const fontSize = fitSignFontSize({
         sceneWidth: element.clientWidth,
-        longestLineWidthAt100: Math.max(
-          0,
-          ...lines.map(
-            (line) => context.measureText(line.replace(/\t/g, '    ')).width,
-          ),
-        ),
+        longestLineWidthAt100: 0,
         capHeightAt100:
           capital.actualBoundingBoxAscent + capital.actualBoundingBoxDescent ||
           70,
-        lineCount: lines.length,
+        lineCount: 1,
       });
-      if (size > 0) setFontSize(Math.round(size * 100) / 100);
+      // Measure the same DOM as the preview, at its natural, unwrapped size.
+      // Scaling the entire result also shrinks <size=...px> and inline symbols.
+      const probe = text.cloneNode(true) as HTMLDivElement;
+      Object.assign(probe.style, {
+        position: 'absolute',
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        transform: 'none',
+        fontSize: `${fontSize}px`,
+      });
+      probe.setAttribute('aria-hidden', 'true');
+      text.parentElement!.appendChild(probe);
+      let scale: number;
+      try {
+        const bounds = probe.getBoundingClientRect();
+        scale = fitSignContentScale({
+          sceneWidth: element.clientWidth,
+          contentWidth: bounds.width,
+          contentHeight: bounds.height,
+        });
+      } finally {
+        probe.remove();
+      }
+      setLayout((previous) =>
+        previous.fontSize === fontSize && previous.scale === scale
+          ? previous
+          : { fontSize, scale },
+      );
     };
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     measure();
-    void document.fonts
-      .load('400 100px Norse')
+    void Promise.all([
+      document.fonts.load('400 100px Norse'),
+      document.fonts.load('700 100px Norse'),
+    ])
       .then(measure)
       .catch(() => {});
+    document.fonts.addEventListener('loadingdone', measure);
     return () => {
       disposed = true;
       observer.disconnect();
+      document.fonts.removeEventListener('loadingdone', measure);
     };
-  }, [scene, text]);
-  return fontSize;
+  }, [scene, content, runs]);
+  return layout;
 }

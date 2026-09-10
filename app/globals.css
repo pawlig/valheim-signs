@@ -584,8 +584,9 @@ textarea::placeholder {
   left: 22.28%;
   width: 55.44%;
   transform: translateY(-50%);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  display: flex;
+  white-space: pre;
+  overflow-wrap: normal;
   font-family: 'Norse', sans-serif;
   font-weight: 400;
   color: #000000;
@@ -593,6 +594,11 @@ textarea::placeholder {
   text-shadow: none;
   letter-spacing: normal;
   pointer-events: none;
+}
+.sign-text-content {
+  flex: 0 0 auto;
+  width: max-content;
+  white-space: pre;
 }
 .preview-top {
   position: absolute;

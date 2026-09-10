@@ -202,10 +202,8 @@ export default function Page() {
   const over = count.units > Number(limit);
   const unicodeRisk = !over && count.bytes > Number(limit);
   const signScene = useRef<HTMLDivElement>(null);
-  const previewFontSize = useSignFontSize(
-    signScene,
-    preview.runs.map((run) => run.text).join(''),
-  );
+  const signContent = useRef<HTMLDivElement>(null);
+  const previewLayout = useSignFontSize(signScene, signContent, preview.runs);
   const set = <K extends keyof SignSettings>(
     key: K,
     value: SignSettings[K],
@@ -720,37 +718,52 @@ export default function Page() {
                   className="sign-text"
                   style={{
                     textAlign: preview.align,
-                    fontSize: previewFontSize ?? '14cqw',
+                    fontSize: previewLayout.fontSize || '14cqw',
+                    justifyContent:
+                      preview.align === 'left'
+                        ? 'flex-start'
+                        : preview.align === 'right'
+                          ? 'flex-end'
+                          : 'center',
                   }}
                 >
-                  {preview.runs.map((run, i) =>
-                    run.style.transform ? (
-                      <span key={i}>
-                        {Array.from(
-                          new Intl.Segmenter('cs', {
-                            granularity: 'grapheme',
-                          }).segment(run.text),
-                          (item) => item.segment,
-                        ).map((char, j) => (
-                          <span
-                            key={j}
-                            style={
-                              {
-                                ...run.style,
-                                display: 'inline-block',
-                              } as CSSProperties
-                            }
-                          >
-                            {char}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span key={i} style={run.style as CSSProperties}>
-                        {run.text}
-                      </span>
-                    ),
-                  )}
+                  <div
+                    className="sign-text-content"
+                    ref={signContent}
+                    style={{
+                      transform: `scale(${previewLayout.scale})`,
+                      transformOrigin: `${preview.align === 'justify' ? 'center' : preview.align} center`,
+                    }}
+                  >
+                    {preview.runs.map((run, i) =>
+                      run.style.transform ? (
+                        <span key={i}>
+                          {Array.from(
+                            new Intl.Segmenter('cs', {
+                              granularity: 'grapheme',
+                            }).segment(run.text),
+                            (item) => item.segment,
+                          ).map((char, j) => (
+                            <span
+                              key={j}
+                              style={
+                                {
+                                  ...run.style,
+                                  display: 'inline-block',
+                                } as CSSProperties
+                              }
+                            >
+                              {char}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span key={i} style={run.style as CSSProperties}>
+                          {run.text}
+                        </span>
+                      ),
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="preview-bottom">

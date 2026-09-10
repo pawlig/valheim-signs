@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fitSignFontSize, SIGN_GEOMETRY } from '../lib/sign-layout.ts';
+import {
+  fitSignFontSize,
+  fitSignContentScale,
+  SIGN_GEOMETRY,
+} from '../lib/sign-layout.ts';
 import { compileSign, defaults } from '../lib/rich-text.ts';
 const sample = {
   sceneWidth: 600,
@@ -32,4 +36,42 @@ void test('multiple explicit lines also fit vertically', () => {
 void test('default black sign needs no color or size markup', () => {
   assert.equal(defaults.color, '');
   assert.equal(compileSign('DŘEVO', defaults), 'DŘEVO');
+});
+
+void test('oversized rich text shrinks as a whole without a minimum font size', () => {
+  const availableWidth =
+    600 * SIGN_GEOMETRY.boardWidthRatio * SIGN_GEOMETRY.textWidthRatio;
+  for (const contentWidth of [500, 1200, 100000]) {
+    const scale = fitSignContentScale({
+      sceneWidth: 600,
+      contentWidth,
+      contentHeight: 80,
+    });
+    assert.ok(scale > 0 && scale < 1);
+    assert.ok(Math.abs(contentWidth * scale - availableWidth) < 0.001);
+  }
+});
+
+void test('explicit multiline content fits the height while short content stays unchanged', () => {
+  assert.equal(
+    fitSignContentScale({
+      sceneWidth: 600,
+      contentWidth: 150,
+      contentHeight: 60,
+    }),
+    1,
+  );
+  const scale = fitSignContentScale({
+    sceneWidth: 600,
+    contentWidth: 250,
+    contentHeight: 400,
+  });
+  assert.ok(
+    Math.abs(
+      400 * scale -
+        600 *
+          SIGN_GEOMETRY.boardHeightRatio *
+          SIGN_GEOMETRY.multilineHeightRatio,
+    ) < 0.001,
+  );
 });

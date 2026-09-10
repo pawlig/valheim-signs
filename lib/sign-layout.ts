@@ -11,6 +11,30 @@ export const SIGN_GEOMETRY = {
   lineHeight: 1.05,
 } as const;
 
+/** Preserve explicit lines and shrink the complete styled label to the board. */
+export function fitSignContentScale({
+  sceneWidth,
+  contentWidth,
+  contentHeight,
+}: {
+  sceneWidth: number;
+  contentWidth: number;
+  contentHeight: number;
+}): number {
+  if (sceneWidth <= 0) return 1;
+  const width =
+    sceneWidth * SIGN_GEOMETRY.boardWidthRatio * SIGN_GEOMETRY.textWidthRatio;
+  const height =
+    sceneWidth *
+    SIGN_GEOMETRY.boardHeightRatio *
+    SIGN_GEOMETRY.multilineHeightRatio;
+  return Math.min(
+    1,
+    contentWidth > 0 ? width / contentWidth : 1,
+    contentHeight > 0 ? height / contentHeight : 1,
+  );
+}
+
 export function fitSignFontSize({
   sceneWidth,
   longestLineWidthAt100,
