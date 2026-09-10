@@ -2,6 +2,23 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @custom-variant dark (&:is(.dark *));
+
+/* Norse by Joël Carrouché; original files embedded under the bundled license. */
+@font-face {
+  font-family: 'Norse';
+  src: url('/fonts/norse/Norse.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Norse';
+  src: url('/fonts/norse/Norsebold.otf') format('opentype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -338,6 +355,7 @@ textarea::placeholder {
 }
 .formatting-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding-bottom: 22px;
   border-bottom: 1px solid #344037;
@@ -562,17 +580,18 @@ textarea::placeholder {
 }
 .sign-text {
   position: absolute;
-  top: 45.4%;
-  left: 23%;
-  width: 54%;
+  top: calc(50% - 2.333333cqw);
+  left: 22.28%;
+  width: 55.44%;
   transform: translateY(-50%);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-family: Georgia, 'Times New Roman', serif;
-  color: #181712;
-  line-height: 1.17;
-  text-shadow: 0 2px 2px #0009;
-  letter-spacing: 0.035em;
+  font-family: 'Norse', sans-serif;
+  font-weight: 400;
+  color: #000000;
+  line-height: 1.05;
+  text-shadow: none;
+  letter-spacing: normal;
   pointer-events: none;
 }
 .preview-top {
@@ -1090,9 +1109,6 @@ footer {
   .vanilla-label {
     display: none;
   }
-  .sign-text {
-    top: 46%;
-  }
   .template-card {
     padding: 13px;
   }
@@ -1166,9 +1182,6 @@ footer {
   }
   .sign-scene {
     aspect-ratio: 1.75;
-  }
-  .sign-text {
-    top: 45.6%;
   }
   .editor-tabs {
     padding: 20px 22px 0;
@@ -1316,4 +1329,16 @@ footer {
 }
 .tag-grid button code {
   font-size: 12px;
+}
+
+/* Keep the selected black swatch visible against its fill. */
+.swatch[style*='#000000'] {
+  color: #ffffff;
+}
+
+.symbols button {
+  min-width: 30px;
+  min-height: 30px;
+  display: inline-grid;
+  place-items: center;
 }

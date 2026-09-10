@@ -19,7 +19,19 @@
 - Uzavírací značky uprostřed textu se zachovávají.
 - Počítají se jednotky UTF-16 a UTF-8 bajty. Nadlimitní text lze zkopírovat, ale doprovází ho upozornění.
 - Změna osvětlení se týká jen náhledu. Nevytváří neexistující vanilla příkaz pro svítící ceduli.
-- Náhled nepoužívá původní herní font. Procentuální velikost je relativní; absolutní velikost a posuny jsou jen orientační.
+- Náhled používá vložené písmo Norse (Regular a Bold); herní TMP atlas a jeho vykreslování se mohou lišit. Procentuální velikost je relativní; absolutní velikost a posuny jsou jen orientační.
 - Sprites, fonty, přechody, styly, odkazy a stránky nejsou předstírány jako funkční webové efekty.
 
 Tato rešerše není test přímo ve spuštěné hře. Před rozsáhlým používáním pokročilých značek vyzkoušej jednu ceduli ve své verzi Valheimu.
+
+
+## Písmo náhledu
+
+Cedule používají asset `Valheim-Norse`; výslovně jej jako výchozí font cedulí uvádí autor ComfySigns v [historii verze 1.4.0](https://thunderstore.io/c/valheim/p/ComfyMods/ComfySigns/v/1.5.0/). Do náhledu jsou vložené nezměněné řezy Norse Regular a Bold z [webu autora Joëla Carrouchého](https://www.joelcarrouche.com/fonts/norse). Přiložená licence dovoluje vložení do aplikací a webových stránek. Písmo se nezapisuje do herního rich textu: jde o vzhled náhledu. Samotná shoda rodiny písma nezaručuje shodu herního atlasu, měřítka či materiálu.
+
+
+## Měřítko a barva náhledu
+
+Výchozí nápis je černý Norse Regular, tučný řez zapíná tlačítko B. Změna kalibrace neupravuje generované značky velikosti. Jako vizuální reference slouží [moCronikův screenshot REGULAR/BOLD](https://steamcommunity.com/sharedfiles/filedetails/?id=3030696826): běžná písmena zabírají přibližně 45–50 % výšky plochy cedule a delší nápis využívá téměř celou šířku. Jde o odhad z perspektivního obrázku, ne měření herního enginu. [Druhá obrazová reference](https://www.valheimians.com/article/change-sign-size-amp-color/) ukazuje upravené barevné nápisy, proto se nepoužila jako měřítko výchozí velikosti.
+
+Náhled měří šířku skutečného fontu v prohlížeči, zachovává poměr k ploše cedule při změně šířky okna a plynule zmenšuje dlouhé či víceřádkové nápisy. Odstraňuje původní skokové zmenšení po 30 znacích. Použitá ilustrace má jiný tvar než herní model, proto zůstává náhled orientační. Výchozí černá nepotřebuje barevnou značku.

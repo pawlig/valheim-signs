@@ -44,7 +44,7 @@ Výchozí Vite port je 5173. `npm run build:docker` vytvoří samostatný web v 
 
 Výchozí rozpočet je 50 jednotek vstupu včetně značek. Počítadlo ukazuje UTF-16 jednotky (obvyklé počítání Unity/C#), navíc UTF‑8 bajty. Zdroje se v jednotce limitu rozcházejí; text s diakritikou proto dostane upozornění, pokud přesáhne 50 bajtů. Profil 999 je pro odpovídající mod, limit vanilla hry nijak nemění.
 
-Náhled je aproximace přes bezpečný parser a React textové uzly, nikoli spouštění HTML. Přesný font a měřítko ve hře, auto-sizing, vzhled materiálu, řádkové zarovnání, fontové assety a některé složité TMP značky nelze v prohlížeči zaručit. Neznámé značky mají upozornění. Značky s assety vyžadují nastavení ve hře; nejsou prezentovány jako zaručené vanilla funkce.
+Náhled je aproximace přes bezpečný parser a React textové uzly, nikoli spouštění HTML. Náhled používá font Norse od Joëla Carrouchého. Přesné měřítko ve hře, auto-sizing, vzhled materiálu, řádkové zarovnání, fontové assety a některé složité TMP značky nelze v prohlížeči zaručit. Neznámé značky mají upozornění. Značky s assety vyžadují nastavení ve hře; nejsou prezentovány jako zaručené vanilla funkce.
 
 [Rešerše a zdroje](docs/rich-text-research.md)
 

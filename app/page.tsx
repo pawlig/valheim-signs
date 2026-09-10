@@ -31,6 +31,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { useSignFontSize } from '@/hooks/use-sign-font-size';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -66,7 +67,63 @@ const palette = [
   '#A9C89F',
   '#90C9E3',
   '#C4A4DE',
-  '#333333',
+  '#000000',
+];
+const signSymbols = [
+  '←',
+  '→',
+  '↑',
+  '↓',
+  '★',
+  '◆',
+  '⚔',
+  'ᚱ',
+  'ᚦ',
+  '♠',
+  '♣',
+  '♥',
+  '♦',
+  '☀',
+  '☁',
+  '☂',
+  '☃',
+  '☄',
+  '☆',
+  '☎',
+  '☏',
+  '☢',
+  '☣',
+  '☸',
+  '☹',
+  '☺',
+  '♀',
+  '♁',
+  '♂',
+  '♈',
+  '♟',
+  '♡',
+  '♢',
+  '♤',
+  '♹',
+  '♺',
+  '♻',
+  '♼',
+  '♽',
+  '♾',
+  '♿',
+  '⚛',
+  '⚜',
+  '⚠',
+  '⚡',
+  '⚧',
+  '⚪',
+  '⚫',
+  '✂',
+  '⛎',
+  '⛏',
+  '⛑',
+  '⛓',
+  '⛔',
 ];
 const templateIcons = [Home, Package, Compass, Skull];
 const sources = [
@@ -79,6 +136,10 @@ const sources = [
     'https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html',
   ],
   ['Valheim Wiki · cedule a limit', 'https://valheim.fandom.com/wiki/Sign'],
+  [
+    'Herní reference · běžný a tučný nápis',
+    'https://steamcommunity.com/sharedfiles/filedetails/?id=3030696826',
+  ],
   [
     'ComfySigns · rozdíly při použití modu',
     'https://github.com/redseiko/ComfyMods/tree/main/ComfySigns',
@@ -140,7 +201,11 @@ export default function Page() {
   const preview = useMemo(() => parseRichText(code), [code]);
   const over = count.units > Number(limit);
   const unicodeRisk = !over && count.bytes > Number(limit);
-  const visibleCount = preview.runs.map((r) => r.text).join('').length;
+  const signScene = useRef<HTMLDivElement>(null);
+  const previewFontSize = useSignFontSize(
+    signScene,
+    preview.runs.map((run) => run.text).join(''),
+  );
   const set = <K extends keyof SignSettings>(
     key: K,
     value: SignSettings[K],
@@ -308,7 +373,7 @@ export default function Page() {
                     oba údaje. Režim 999 použij jen s odpovídajícím modem.
                   </p>
                   <p>
-                    Náhled je přibližný. Originální herní font, automatické
+                    Náhled je přibližný. Herní atlas znaků, automatické
                     zmenšování, řádkové zarovnání, materiál, svit ani dostupnost
                     Unicode znaků web věrně nereprodukuje. Emoji se ve hře
                     nemusí zobrazit.
@@ -470,13 +535,29 @@ export default function Page() {
                         <Icon size={18} />
                       </button>
                     ))}
+                    <button
+                      className="format-button"
+                      onClick={() => wrap('<sub>')}
+                      aria-label="Dolní index"
+                      title="Dolní index (sub)"
+                    >
+                      x₂
+                    </button>
+                    <button
+                      className="format-button"
+                      onClick={() => wrap('<sup>')}
+                      aria-label="Horní index"
+                      title="Horní index (sup)"
+                    >
+                      x²
+                    </button>
                   </div>
                 </div>
                 <div className="color-section">
                   <div className="label-row">
                     <label htmlFor="custom-color">Barva písma</label>
                     <span className="color-hex">
-                      {settings.color || 'Výchozí'}
+                      {settings.color || 'Černá · výchozí'}
                     </span>
                   </div>
                   <div className="palette">
@@ -484,12 +565,14 @@ export default function Page() {
                       <button
                         key={color}
                         aria-label={`Barva ${['zlatá', 'bílá', 'červená', 'žlutá', 'zelená', 'modrá', 'fialová', 'černá'][i]}`}
-                        aria-pressed={settings.color === color}
-                        className={`swatch ${settings.color === color ? 'active' : ''}`}
+                        aria-pressed={(settings.color || '#000000') === color}
+                        className={`swatch ${(settings.color || '#000000') === color ? 'active' : ''}`}
                         style={{ '--swatch': color } as CSSProperties}
                         onClick={() => chooseColor(color)}
                       >
-                        {settings.color === color && <Check size={16} />}
+                        {(settings.color || '#000000') === color && (
+                          <Check size={16} />
+                        )}
                       </button>
                     ))}
                     <label className="custom-color" title="Vlastní barva">
@@ -497,7 +580,7 @@ export default function Page() {
                       <input
                         id="custom-color"
                         type="color"
-                        value={settings.color || '#FFFFFF'}
+                        value={settings.color || '#000000'}
                         onChange={(e) =>
                           chooseColor(e.target.value.toUpperCase())
                         }
@@ -557,8 +640,6 @@ export default function Page() {
                     />
                     <div className="insert-tools">
                       <button onClick={() => wrap('<uppercase>')}>ABC</button>
-                      <button onClick={() => wrap('<sub>')}>x₂</button>
-                      <button onClick={() => wrap('<sup>')}>x²</button>
                       <button onClick={() => setGuideOpen(true)}>
                         Další značky <ArrowRight size={14} />
                       </button>
@@ -567,18 +648,16 @@ export default function Page() {
                 )}
                 <div className="symbols">
                   <span>VLOŽIT SYMBOL</span>
-                  {['←', '→', '↑', '↓', '★', '◆', '⚔', 'ᚱ', 'ᚦ'].map(
-                    (symbol) => (
-                      <button
-                        key={symbol}
-                        title={`Vložit ${symbol}`}
-                        aria-label={`Vložit symbol ${symbol}`}
-                        onClick={() => insert(symbol)}
-                      >
-                        {symbol}
-                      </button>
-                    ),
-                  )}
+                  {signSymbols.map((symbol) => (
+                    <button
+                      key={symbol}
+                      title={`Vložit ${symbol}`}
+                      aria-label={`Vložit symbol ${symbol}`}
+                      onClick={() => insert(symbol)}
+                    >
+                      {symbol}
+                    </button>
+                  ))}
                 </div>
               </TabsContent>
               <TabsContent value="code">
@@ -630,7 +709,7 @@ export default function Page() {
                   {day ? <Sun size={17} /> : <Moon size={17} />}
                 </button>
               </div>
-              <div className="sign-scene">
+              <div className="sign-scene" ref={signScene}>
                 <img
                   src="/sign-scene.png"
                   alt="Prázdná dřevěná cedule v severském lese"
@@ -641,10 +720,7 @@ export default function Page() {
                   className="sign-text"
                   style={{
                     textAlign: preview.align,
-                    fontSize:
-                      visibleCount > 30
-                        ? 'clamp(12px, 2.1cqw, 27px)'
-                        : 'clamp(16px, 3.6cqw, 42px)',
+                    fontSize: previewFontSize ?? '14cqw',
                   }}
                 >
                   {preview.runs.map((run, i) =>

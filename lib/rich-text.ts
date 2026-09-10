@@ -11,7 +11,7 @@ export type SignSettings = {
   opacity: number;
 };
 export const defaults: SignSettings = {
-  color: '#EBC789',
+  color: '',
   size: 100,
   bold: false,
   italic: false,
